@@ -386,10 +386,23 @@ body::before {
 .drawer-head { display: flex; align-items: center; justify-content: space-between; padding: 18px 22px; border-bottom: 1px solid rgba(199,208,218,.1); }
 .drawer-head h2 { font-size: 1.4rem; }
 .drawer-body { flex: 1; overflow-y: auto; padding: 18px 22px 24px; display: flex; flex-direction: column; gap: 14px; }
+.drawer-sent { justify-content: flex-start !important; overflow-y: auto; }
 .drawer-empty, .drawer-sent { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 30px 26px; text-align: center; }
 .drawer-sent h3 { font-family: var(--font-display); font-size: 1.35rem; }
 .drawer-sent p { color: #c3d0dc; max-width: 30ch; }
-.sent-icon { width: 64px; height: 64px; border-radius: 50%; display: grid; place-items: center; background: rgba(37,211,102,.15); color: var(--wa); }
+.pix { width: 100%; margin-top: 10px; padding: 18px; border-radius: var(--radius); background: var(--abyss); border: 1px solid var(--tide); display: flex; flex-direction: column; gap: 12px; text-align: left; }
+.pix h4 { margin: 0; font-family: var(--font-display); font-size: 1.1rem; }
+.drawer-sent .pix p { max-width: none; }
+.pix-warn { font-size: .86rem; color: #f3c9a0 !important; padding-left: 10px; border-left: 2px solid #e8a15a; }
+.pix-row { display: grid; grid-template-columns: 132px 1fr; gap: 14px; align-items: start; }
+.pix-qr { width: 132px; height: 132px; border-radius: 8px; display: block; }
+.pix-data { margin: 0; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.pix-data dt { font-size: .66rem; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+.pix-data dd { margin: 0; font-weight: 600; font-size: .9rem; line-height: 1.3; overflow-wrap: anywhere; }
+.pix-key { font-variant-numeric: tabular-nums; user-select: all; }
+.pix-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.pix-actions .btn { padding: 10px 8px; font-size: .84rem; white-space: normal; text-align: center; line-height: 1.2; }
+.sent-icon { flex: none; width: 64px; height: 64px; border-radius: 50%; display: grid; place-items: center; background: rgba(37,211,102,.15); color: var(--wa); }
 
 .cart-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
 .cart-item { display: grid; grid-template-columns: 72px 1fr auto; gap: 12px; align-items: center; padding: 10px; border-radius: 12px; background: var(--abyss); border: 1px solid rgba(199,208,218,.08); }

@@ -1,16 +1,17 @@
 import { useEffect, useState } from 'react';
 import BettaArt from './BettaArt.jsx';
 import { IconClose, IconTrash, IconWhatsApp, IconCheck } from './Icons.jsx';
+import PixBox from './PixBox.jsx';
 import { STORE, formatBRL, whatsappLink } from '../config.js';
 
-const DELIVERY = ['Retirada', 'Entrega na cidade', 'Envio para outra cidade'];
+const DELIVERY = ['Retirada', 'Entrega em Fortaleza', 'Entrega na Região Metropolitana'];
 
 function buildMessage(items, total, form, code) {
   const lines = items.map(
     (it) => `• ${it.qty}x Betta ${it.name} (${it.sex}) — ${formatBRL(it.price * it.qty)}`
   );
   return [
-    `Olá, ${STORE.name}! Quero fazer um pedido 🐟`,
+    `Olá, ${STORE.name}! Quero fazer um pedido.`,
     '',
     `*Pedido ${code}*`,
     ...lines,
@@ -22,7 +23,7 @@ function buildMessage(items, total, form, code) {
     `*Entrega:* ${form.delivery}`,
     form.notes ? `*Observações:* ${form.notes}` : null,
     '',
-    'Aguardo as formas de pagamento e o valor do frete.',
+    'Aguardo a confirmação do pedido e o valor da entrega.',
   ]
     .filter((l) => l !== null)
     .join('\n');
@@ -55,14 +56,14 @@ export default function CartDrawer({ open, onClose, items, setQty, remove, clear
     e.preventDefault();
     const er = {};
     if (!form.name.trim()) er.name = 'Digite seu nome para identificarmos o pedido.';
-    if (!form.city.trim()) er.city = 'Informe cidade e bairro para calcular a entrega.';
+    if (!form.city.trim()) er.city = 'Informe cidade e bairro para combinarmos a entrega.';
     setErrors(er);
     if (Object.keys(er).length) return;
 
     const code = 'ZB-' + Date.now().toString(36).slice(-5).toUpperCase();
     const url = whatsappLink(buildMessage(items, total, form, code));
     window.open(url, '_blank', 'noopener');
-    setSent({ code, url });
+    setSent({ code, url, total, pickup: form.delivery === DELIVERY[0] });
   };
 
   return (
@@ -83,13 +84,14 @@ export default function CartDrawer({ open, onClose, items, setQty, remove, clear
             </span>
             <h3>Pedido {sent.code} pronto</h3>
             <p>
-              Abrimos o WhatsApp com o resumo do seu pedido. Envie a mensagem para combinar o
-              pagamento e a entrega.
+              Abrimos o WhatsApp com o resumo do seu pedido. Envie a mensagem para confirmarmos o
+              peixe e combinarmos a entrega.
             </p>
             <p className="muted small">O WhatsApp não abriu? Toque no botão abaixo.</p>
             <a className="btn btn-wa btn-block" href={sent.url} target="_blank" rel="noopener noreferrer">
               <IconWhatsApp /> Abrir WhatsApp
             </a>
+            {STORE.pix && <PixBox total={sent.total} pickup={sent.pickup} />}
             <button
               type="button"
               className="btn btn-ghost btn-block"
@@ -153,7 +155,7 @@ export default function CartDrawer({ open, onClose, items, setQty, remove, clear
               </span>
               <strong>{formatBRL(total)}</strong>
             </div>
-            <p className="muted small">Frete e forma de pagamento são combinados no WhatsApp.</p>
+            <p className="muted small">Entregamos apenas em {STORE.deliveryArea}. O valor da entrega é combinado no WhatsApp.</p>
 
             <fieldset className="order-form">
               <legend>Seus dados</legend>

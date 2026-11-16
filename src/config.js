@@ -15,7 +15,21 @@ export const STORE = {
   instagram: 'https://instagram.com/zarakibettas',
   instagramHandle: '@zarakibettas',
 
-  city: 'Ceará',
+  city: 'Fortaleza – CE',
+
+  // Onde vocês entregam (aparece no topo do site, no carrinho e nas dúvidas)
+  deliveryArea: 'Fortaleza e Região Metropolitana',
+
+  // Dados do Pix mostrados ao cliente depois que ele envia o pedido.
+  // Para esconder o Pix do site, troque todo o bloco por:  pix: null,
+  pix: {
+    keyType: 'CPF',
+    key: '05026642314', // só números (é o que vai no QR Code e no botão "Copiar chave")
+    keyDisplay: '050.266.423-14', // como a chave aparece escrita
+    name: 'Franscisco Georvane da Costa',
+    bank: 'Nubank (Nu Pagamentos)',
+    city: 'Fortaleza',
+  },
 };
 
 export function whatsappLink(message = '') {

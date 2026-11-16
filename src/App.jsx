@@ -100,7 +100,11 @@ const ACCLIMATION = [
 const FAQ = [
   {
     q: 'Como o peixe chega até mim?',
-    a: 'Embalamos em saco duplo com água condicionada e oxigênio, dentro de caixa térmica. Para outras cidades, combinamos a transportadora mais rápida para a sua região.',
+    a: 'Embalamos em saco duplo com água condicionada e oxigênio, dentro de caixa térmica. Você pode retirar com a gente ou receber em casa, com o valor da entrega combinado pelo WhatsApp.',
+  },
+  {
+    q: 'Vocês enviam para outras cidades?',
+    a: `Por enquanto entregamos apenas em ${STORE.deliveryArea}.`,
   },
   {
     q: 'E se o peixe chegar morto?',
@@ -116,7 +120,7 @@ const FAQ = [
   },
   {
     q: 'Quais formas de pagamento vocês aceitam?',
-    a: 'Pix, cartão e dinheiro na retirada. A forma de pagamento é combinada no WhatsApp depois que você envia o pedido.',
+    a: 'Pix, cartão e dinheiro na retirada. Depois de enviar o pedido, você já vê a chave Pix e o QR Code. O pagamento é feito depois que confirmamos o peixe e a entrega pelo WhatsApp.',
   },
 ];
 
@@ -206,9 +210,9 @@ export default function App() {
       {/* ---------- Faixa de avisos ---------- */}
       <div className="announce">
         <div className="wrap announce-inner">
-          <span>Enviamos foto e vídeo do seu peixe antes de fechar</span>
+          <span>Entregamos em {STORE.deliveryArea}</span>
           <span className="announce-sep" aria-hidden="true">·</span>
-          <span>Garantia de chegada viva</span>
+          <span>Enviamos foto e vídeo do seu peixe antes de fechar</span>
         </div>
       </div>
 
@@ -357,7 +361,7 @@ export default function App() {
             <div className="perk">
               <IconTruck />
               <div>
-                <h3>Envio seguro</h3>
+                <h3>Entrega segura</h3>
                 <p>Saco duplo com oxigênio dentro de caixa térmica.</p>
               </div>
             </div>
@@ -474,7 +478,7 @@ export default function App() {
               <li>
                 <span className="step-n">3</span>
                 <h3>Combine pagamento e entrega</h3>
-                <p>Respondemos com fotos do seu peixe, o frete e as formas de pagamento.</p>
+                <p>Confirmamos o peixe e o valor da entrega. Você paga por Pix, cartão ou dinheiro na retirada.</p>
               </li>
             </ol>
             <ul className="pay">
@@ -623,7 +627,7 @@ export default function App() {
         </div>
         <div className="wrap footer-base">
           <p className="muted small">© {new Date().getFullYear()} {STORE.name}. Todos os direitos reservados.</p>
-          <p className="muted small">Pagamento e entrega combinados pelo WhatsApp.</p>
+          <p className="muted small">Entregas em {STORE.deliveryArea}.</p>
         </div>
       </footer>
 
