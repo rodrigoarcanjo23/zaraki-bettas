@@ -20,6 +20,19 @@ export const STORE = {
   // Onde vocês entregam (aparece no topo do site, no carrinho e nas dúvidas)
   deliveryArea: 'Fortaleza e Região Metropolitana',
 
+  // Seção "Sobre a criação". Enquanto estiver  about: null  ela não aparece no site.
+  // Para ativar, troque por algo assim:
+  //
+  //   about: {
+  //     title: 'Uma criação pequena, feita com cuidado',
+  //     text: [
+  //       'Primeiro parágrafo: como você começou a criar bettas.',
+  //       'Segundo parágrafo: como é a sua criação hoje.',
+  //     ],
+  //     photo: '/sobre.jpg',   // opcional: foto do espaço da criação, em /public/
+  //   },
+  about: null,
+
   // Dados do Pix mostrados ao cliente depois que ele envia o pedido.
   // Para esconder o Pix do site, troque todo o bloco por:  pix: null,
   pix: {

@@ -577,6 +577,25 @@ button.card-media { border: 0; border-bottom: 1px solid rgba(199,208,218,.08); w
 .footer-col a:hover { color: #fff; }
 .footer-base { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px 24px; margin-top: 40px; padding-top: 22px; border-top: 1px solid rgba(199,208,218,.1); }
 
+/* ---------- Vendidos, depoimentos, sobre ---------- */
+.empty-note { padding: 28px; border-radius: var(--radius); border: 1px dashed var(--tide); color: var(--muted); text-align: center; }
+.empty-note a { color: var(--pearl); }
+.sold-section { padding-top: 0; }
+.sold-grid { margin-top: 28px; }
+.modal-links { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 18px; }
+.quotes { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 22px; margin-top: 36px; }
+.quote { margin: 0; display: flex; flex-direction: column; border-radius: var(--radius); overflow: hidden; background: var(--deep); border: 1px solid rgba(199,208,218,.1); }
+.quote img { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; }
+.quote blockquote { margin: 0; padding: 22px 22px 12px; color: #dbe4ec; font-size: 1.02rem; line-height: 1.55; }
+.quote blockquote::before { content: "“"; display: block; font-family: var(--font-display); font-size: 2.4rem; line-height: .6; color: var(--red); margin-bottom: 10px; }
+.quote figcaption { padding: 0 22px 22px; margin-top: auto; color: var(--muted); font-size: .9rem; }
+.quote figcaption strong { color: var(--pearl); }
+.about { display: grid; grid-template-columns: 1fr; gap: 40px; align-items: center; }
+.about.has-photo { grid-template-columns: 1.1fr .9fr; }
+.about > * { min-width: 0; }
+.about-text { color: #c3d0dc; margin-top: 16px; max-width: 60ch; }
+.about img { width: 100%; border-radius: var(--radius); border: 1px solid rgba(199,208,218,.14); }
+
 /* ---------- Responsivo ---------- */
 @media (max-width: 960px) {
   .hero-grid { grid-template-columns: 1fr; gap: 40px; }
@@ -585,6 +604,7 @@ button.card-media { border: 0; border-bottom: 1px solid rgba(199,208,218,.08); w
   .hero-tag { position: relative; left: auto; right: auto; bottom: auto; margin-top: -34px; align-items: center; text-align: center; }
   .perks-grid { grid-template-columns: 1fr 1fr; }
   .care-grid { grid-template-columns: 1fr; }
+  .about.has-photo { grid-template-columns: 1fr; }
   .params { grid-template-columns: repeat(3, 1fr); }
   .faq-wrap { grid-template-columns: 1fr; gap: 28px; }
   .tails { grid-template-columns: 1fr; }

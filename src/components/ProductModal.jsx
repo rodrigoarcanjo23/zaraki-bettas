@@ -24,6 +24,7 @@ export default function ProductModal({ product, onClose, onAdd }) {
   const [mediaIdx, setMediaIdx] = useState(0);
   const [tall, setTall] = useState(false);
   const closeRef = useRef(null);
+  const [shared, setShared] = useState(null);
   const media = useMemo(() => (product ? mediaOf(product) : []), [product]);
 
   useEffect(() => {
@@ -44,6 +45,23 @@ export default function ProductModal({ product, onClose, onAdd }) {
   useEffect(() => setTall(false), [mediaIdx, product]);
 
   if (!product) return null;
+
+  const share = async () => {
+    const url = window.location.href;
+    const data = { title: `Betta ${product.name} | ${STORE.name}`, text: `Olha este betta da ${STORE.name}: ${product.name}`, url };
+    try {
+      if (navigator.share) {
+        await navigator.share(data);
+        return;
+      }
+      await navigator.clipboard.writeText(url);
+      setShared('ok');
+    } catch (err) {
+      if (err?.name === 'AbortError') return; // a pessoa fechou a janela de compartilhar
+      setShared('erro');
+    }
+    setTimeout(() => setShared(null), 2400);
+  };
   const variant = product.variants[variantIdx] || product.variants[0];
   const current = media[mediaIdx];
   const ask = `Olá, ${STORE.name}! Tenho interesse no Betta ${product.name} (${variant.sex}). Pode me mandar mais fotos e vídeo?`;
@@ -194,11 +212,16 @@ export default function ProductModal({ product, onClose, onAdd }) {
             )}
           </div>
 
-          {!product.sold && (
-            <a className="modal-ask" href={whatsappLink(ask)} target="_blank" rel="noopener noreferrer">
-              <IconWhatsApp width="18" height="18" /> Pedir mais fotos e vídeo deste peixe
-            </a>
-          )}
+          <div className="modal-links">
+            {!product.sold && (
+              <a className="modal-ask" href={whatsappLink(ask)} target="_blank" rel="noopener noreferrer">
+                <IconWhatsApp width="18" height="18" /> Pedir mais fotos e vídeo
+              </a>
+            )}
+            <button type="button" className="link-btn" onClick={share}>
+              {shared === 'ok' ? 'Link copiado' : shared === 'erro' ? 'Copie o endereço da página' : 'Compartilhar este peixe'}
+            </button>
+          </div>
         </div>
       </div>
     </div>

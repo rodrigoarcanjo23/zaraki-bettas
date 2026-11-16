@@ -7,6 +7,7 @@ import {
   IconBag, IconWhatsApp, IconTruck, IconShield, IconDrop, IconCrown, IconInstagram, IconCheck, IconClose,
 } from './components/Icons.jsx';
 import { PRODUCTS, CATEGORIES } from './data/products.js';
+import { DEPOIMENTOS } from './data/depoimentos.js';
 import { STORE, whatsappLink, formatBRL } from './config.js';
 
 const LOGO = '/logo.jpg';
@@ -45,11 +46,19 @@ const SORTS = [
   { id: 'nome', label: 'Nome (A–Z)' },
 ];
 
+// Link direto de cada peixe: site.com/#betta-id-do-peixe
+const HASH = '#betta-';
+const fishFromHash = () => {
+  const h = window.location.hash;
+  return h.startsWith(HASH) ? PRODUCTS.find((p) => p.id === h.slice(HASH.length)) || null : null;
+};
+
 const NAV = [
   { href: '#peixes', label: 'Peixes' },
   { href: '#caudas', label: 'Guia de caudas' },
   { href: '#como-comprar', label: 'Como comprar' },
   { href: '#cuidados', label: 'Cuidados' },
+  ...(STORE.about ? [{ href: '#sobre', label: 'Sobre' }] : []),
 ];
 
 const TAILS = [
@@ -130,7 +139,7 @@ export default function App() {
   const [menu, setMenu] = useState(false);
   const [filter, setFilter] = useState('Todos');
   const [sort, setSort] = useState('destaque');
-  const [detail, setDetail] = useState(null);
+  const [detail, setDetailState] = useState(fishFromHash);
   const [toast, setToast] = useState(null);
 
   useEffect(() => {
@@ -184,19 +193,40 @@ export default function App() {
   const remove = (key) => setCart((c) => c.filter((i) => i.key !== key));
   const clear = () => setCart([]);
   const close = useCallback(() => setOpen(false), []);
-  const closeDetail = useCallback(() => setDetail(null), []);
+  // Abrir/fechar os detalhes atualiza o endereço, para o link poder ser compartilhado.
+  const setDetail = useCallback((product) => {
+    setDetailState(product);
+    try {
+      const url = product ? `${HASH}${product.id}` : window.location.pathname + window.location.search;
+      window.history.replaceState(null, '', url);
+    } catch {
+      /* sem acesso ao histórico */
+    }
+  }, []);
+  const closeDetail = useCallback(() => setDetail(null), [setDetail]);
+
+  useEffect(() => {
+    const onHash = () => {
+      const fish = fishFromHash();
+      if (fish) setDetailState(fish);
+    };
+    window.addEventListener('hashchange', onHash);
+    return () => window.removeEventListener('hashchange', onHash);
+  }, []);
 
   const count = cart.reduce((s, i) => s + i.qty, 0);
   const total = cart.reduce((s, i) => s + i.qty * i.price, 0);
 
   const shown = useMemo(() => {
-    const list = filter === 'Todos' ? [...PRODUCTS] : PRODUCTS.filter((p) => p.category === filter);
+    const available = PRODUCTS.filter((p) => !p.sold);
+    const list = filter === 'Todos' ? available : available.filter((p) => p.category === filter);
     if (sort === 'menor') list.sort((a, b) => cardPrice(a) - cardPrice(b));
     if (sort === 'maior') list.sort((a, b) => cardPrice(b) - cardPrice(a));
     if (sort === 'nome') list.sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
-    // vendidos sempre por último
-    return list.sort((a, b) => Boolean(a.sold) - Boolean(b.sold));
+    return list;
   }, [filter, sort]);
+
+  const soldList = PRODUCTS.filter((p) => p.sold);
 
   const realCount = PRODUCTS.filter((p) => p.realPhoto && !p.sold).length;
   const heroSingle = HERO_FISH.variants.length === 1;
@@ -290,7 +320,7 @@ export default function App() {
               <dl className="hero-facts">
                 <div>
                   <dt>{PRODUCTS.filter((p) => !p.sold).length}</dt>
-                  <dd>bettas no catálogo</dd>
+                  <dd>bettas disponíveis</dd>
                 </div>
                 <div>
                   <dt>26–28 °C</dt>
@@ -420,12 +450,43 @@ export default function App() {
                 <ProductCard key={p.id} product={p} onAdd={add} onOpen={setDetail} />
               ))}
             </div>
+            {shown.length === 0 && (
+              <p className="empty-note">
+                Nenhum peixe desse tipo disponível agora.{' '}
+                <a
+                  href={whatsappLink(`Olá, ${STORE.name}! Procuro um betta ${filter}. Vocês têm algum chegando?`)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  Pergunte no WhatsApp
+                </a>{' '}
+                se há algum chegando.
+              </p>
+            )}
             <p className="muted small note">
               Peixes com o selo “Foto real” são exatamente o exemplar que você recebe. Nos demais, a foto
               é de referência da linhagem e cores e marcas variam de peixe para peixe.
             </p>
           </div>
         </section>
+
+        {/* ---------- Vendidos recentemente (aparece quando há peixes com sold: true) ---------- */}
+        {soldList.length > 0 && (
+          <section className="section sold-section" id="vendidos">
+            <div className="wrap">
+              <p className="eyebrow">Já encontraram um lar</p>
+              <h2>Vendidos recentemente</h2>
+              <p className="section-sub">
+                Gostou de algum? Toque em “Avise-me” e chamamos você quando chegar um parecido.
+              </p>
+              <div className="grid sold-grid">
+                {soldList.map((p) => (
+                  <ProductCard key={p.id} product={p} onAdd={add} onOpen={setDetail} />
+                ))}
+              </div>
+            </div>
+          </section>
+        )}
 
         {/* ---------- Guia de caudas ---------- */}
         <section className="section section-alt" id="caudas">
@@ -549,6 +610,46 @@ export default function App() {
           </div>
         </section>
 
+        {/* ---------- Depoimentos (aparece quando há itens em src/data/depoimentos.js) ---------- */}
+        {DEPOIMENTOS.length > 0 && (
+          <section className="section" id="depoimentos">
+            <div className="wrap">
+              <p className="eyebrow">Quem já comprou</p>
+              <h2>O que dizem os clientes</h2>
+              <div className="quotes">
+                {DEPOIMENTOS.map((d) => (
+                  <figure key={d.name + d.text} className="quote">
+                    {d.photo && <img src={d.photo} alt={`Betta de ${d.name}`} loading="lazy" />}
+                    <blockquote>{d.text}</blockquote>
+                    <figcaption>
+                      <strong>{d.name}</strong>
+                      {d.city ? ` · ${d.city}` : ''}
+                    </figcaption>
+                  </figure>
+                ))}
+              </div>
+            </div>
+          </section>
+        )}
+
+        {/* ---------- Sobre (aparece quando STORE.about é preenchido em src/config.js) ---------- */}
+        {STORE.about && (
+          <section className="section section-alt" id="sobre">
+            <div className={`wrap about ${STORE.about.photo ? 'has-photo' : ''}`}>
+              <div>
+                <p className="eyebrow">Sobre a criação</p>
+                <h2>{STORE.about.title}</h2>
+                {STORE.about.text.map((t) => (
+                  <p key={t} className="about-text">
+                    {t}
+                  </p>
+                ))}
+              </div>
+              {STORE.about.photo && <img src={STORE.about.photo} alt="Espaço da criação Zaraki Bettas" loading="lazy" />}
+            </div>
+          </section>
+        )}
+
         {/* ---------- Dúvidas ---------- */}
         <section className="section" id="duvidas">
           <div className="wrap faq-wrap">
@@ -585,6 +686,9 @@ export default function App() {
               className="btn btn-wa btn-lg"
             >
               <IconWhatsApp /> Pedir fotos
+            </a>
+            <a href={STORE.instagram} target="_blank" rel="noopener noreferrer" className="btn btn-outline btn-lg">
+              <IconInstagram /> Seguir no Instagram
             </a>
           </div>
         </section>
