@@ -1,24 +1,101 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import BettaArt from './components/BettaArt.jsx';
 import ProductCard from './components/ProductCard.jsx';
+import ProductModal from './components/ProductModal.jsx';
 import CartDrawer from './components/CartDrawer.jsx';
-import { IconBag, IconWhatsApp, IconTruck, IconShield, IconDrop, IconCrown, IconInstagram } from './components/Icons.jsx';
+import {
+  IconBag, IconWhatsApp, IconTruck, IconShield, IconDrop, IconCrown, IconInstagram, IconCheck, IconClose,
+} from './components/Icons.jsx';
 import { PRODUCTS, CATEGORIES } from './data/products.js';
 import { STORE, whatsappLink, formatBRL } from './config.js';
 
 const LOGO = '/logo.jpg';
 const CART_KEY = 'zaraki-cart';
 
+// Carrega o carrinho salvo e descarta peixes que saíram do catálogo ou foram vendidos.
 function loadCart() {
   try {
-    const raw = localStorage.getItem(CART_KEY);
-    return raw ? JSON.parse(raw) : [];
+    const raw = JSON.parse(localStorage.getItem(CART_KEY) || '[]');
+    return raw
+      .map((item) => {
+        const product = PRODUCTS.find((p) => p.id === item.id && !p.sold);
+        const variant = product?.variants.find((v) => v.sex === item.sex);
+        if (!product || !variant) return null;
+        const qty = product.stock ? Math.min(item.qty, product.stock) : item.qty;
+        return {
+          key: item.key, id: product.id, name: product.name, sex: variant.sex, price: variant.price,
+          art: product.art, image: product.image, stock: product.stock || null, qty,
+        };
+      })
+      .filter(Boolean);
   } catch {
     return [];
   }
 }
 
-const HERO_FISH = PRODUCTS.find((p) => p.id === 'red-dragon');
+const minPrice = (p) => Math.min(...p.variants.map((v) => v.price));
+// preço mostrado no card (primeira opção), usado na ordenação
+const cardPrice = (p) => p.variants[0].price;
+const HERO_FISH = PRODUCTS.find((p) => p.featured && !p.sold) || PRODUCTS.find((p) => !p.sold) || PRODUCTS[0];
+
+const SORTS = [
+  { id: 'destaque', label: 'Destaques primeiro' },
+  { id: 'menor', label: 'Menor preço' },
+  { id: 'maior', label: 'Maior preço' },
+  { id: 'nome', label: 'Nome (A–Z)' },
+];
+
+const NAV = [
+  { href: '#peixes', label: 'Peixes' },
+  { href: '#caudas', label: 'Guia de caudas' },
+  { href: '#como-comprar', label: 'Como comprar' },
+  { href: '#cuidados', label: 'Cuidados' },
+];
+
+const TAILS = [
+  {
+    name: 'Crowntail',
+    abbr: 'CT',
+    text: 'Os raios das nadadeiras passam da membrana e formam pontas, como uma coroa. É a cauda mais dramática quando o peixe se exibe.',
+    art: { tail: 'crown', body: ['#e32a3a', '#8e0a1e'], fin: ['#ef2a3a', '#6a0616'], ears: false },
+  },
+  {
+    name: 'Halfmoon',
+    abbr: 'HM',
+    text: 'A cauda abre em 180°, formando uma meia-lua. Nadadeiras longas e delicadas, que pedem água parada e sem objetos pontiagudos.',
+    art: { tail: 'half', body: ['#2a3550', '#0d1220'], fin: ['#3a8fd6', '#0b0f1a'], ears: false },
+  },
+  {
+    name: 'Dumbo',
+    abbr: 'Big Ear',
+    text: 'As nadadeiras peitorais são bem maiores que o normal e batem como orelhas de elefante. Pode vir com qualquer tipo de cauda.',
+    art: { tail: 'half', body: ['#d9785a', '#9b3fa8'], fin: ['#a8329c', '#f4eef6'], ears: ['#ffffff', '#e4dbe8'] },
+  },
+];
+
+const GLOSSARY = [
+  ['CT', 'Crowntail, cauda em coroa.'],
+  ['HM', 'Halfmoon, cauda em meia-lua.'],
+  ['LT', 'Long Tail, nadadeiras longas.'],
+  ['Macho', 'Nadadeiras maiores e cores mais fortes. Vive sozinho.'],
+  ['Fêmea', 'Nadadeiras curtas e corpo mais arredondado.'],
+];
+
+const KIT = [
+  'Aquário de 10 litros ou mais, com tampa (bettas pulam)',
+  'Aquecedor com termostato, ajustado em 26–28 °C',
+  'Filtro de fluxo fraco ou trocas parciais toda semana',
+  'Condicionador para remover o cloro da água',
+  'Plantas naturais ou de seda, sem pontas que rasguem as nadadeiras',
+  'Ração específica para bettas, em grãos pequenos',
+];
+
+const ACCLIMATION = [
+  { t: 'Boie o saquinho', d: 'Ainda fechado, deixe o saco flutuar no aquário por 15 a 20 minutos para igualar a temperatura.' },
+  { t: 'Misture as águas aos poucos', d: 'Abra o saco e acrescente meio copo de água do aquário a cada 5 minutos, por uns 20 minutos.' },
+  { t: 'Solte só o peixe', d: 'Passe o betta para o aquário com uma redinha. Descarte a água do saco, não despeje no aquário.' },
+  { t: 'Dê um dia de descanso', d: 'Deixe a luz apagada e não alimente nas primeiras 24 horas. É normal ele ficar tímido no começo.' },
+];
 
 const FAQ = [
   {
@@ -28,6 +105,10 @@ const FAQ = [
   {
     q: 'E se o peixe chegar morto?',
     a: 'Grave um vídeo abrindo a embalagem e nos envie em até 2 horas após o recebimento. Repomos o peixe ou devolvemos o valor.',
+  },
+  {
+    q: 'O peixe que recebo é o mesmo da foto?',
+    a: 'Nos peixes com o selo “Foto real”, sim: é exatamente aquele exemplar. Nos demais, a foto é de referência da linhagem e mandamos foto e vídeo do seu peixe pelo WhatsApp antes de fechar.',
   },
   {
     q: 'Posso colocar dois machos no mesmo aquário?',
@@ -42,7 +123,10 @@ const FAQ = [
 export default function App() {
   const [cart, setCart] = useState(loadCart);
   const [open, setOpen] = useState(false);
+  const [menu, setMenu] = useState(false);
   const [filter, setFilter] = useState('Todos');
+  const [sort, setSort] = useState('destaque');
+  const [detail, setDetail] = useState(null);
   const [toast, setToast] = useState(null);
 
   useEffect(() => {
@@ -54,8 +138,8 @@ export default function App() {
   }, [cart]);
 
   useEffect(() => {
-    document.body.style.overflow = open ? 'hidden' : '';
-  }, [open]);
+    document.body.style.overflow = open || detail ? 'hidden' : '';
+  }, [open, detail]);
 
   useEffect(() => {
     if (!toast) return;
@@ -63,34 +147,71 @@ export default function App() {
     return () => clearTimeout(t);
   }, [toast]);
 
-  const add = useCallback((product, variant) => {
-    const key = `${product.id}-${variant.sex}`;
-    setCart((c) => {
-      const found = c.find((i) => i.key === key);
-      if (found) return c.map((i) => (i.key === key ? { ...i, qty: i.qty + 1 } : i));
-      return [
-        ...c,
-        { key, id: product.id, name: product.name, sex: variant.sex, price: variant.price, art: product.art, image: product.image, qty: 1 },
-      ];
-    });
-    setToast(`${product.name} (${variant.sex}) adicionado`);
-  }, []);
+  const add = useCallback(
+    (product, variant) => {
+      if (product.sold) return;
+      const key = `${product.id}-${variant.sex}`;
+      const found = cart.find((i) => i.key === key);
+      if (found && product.stock && found.qty >= product.stock) {
+        setToast(`${product.name} já está no seu pedido (temos só ${product.stock})`);
+        return;
+      }
+      setCart((c) => {
+        if (c.some((i) => i.key === key)) return c.map((i) => (i.key === key ? { ...i, qty: i.qty + 1 } : i));
+        return [
+          ...c,
+          {
+            key, id: product.id, name: product.name, sex: variant.sex, price: variant.price,
+            art: product.art, image: product.image, stock: product.stock || null, qty: 1,
+          },
+        ];
+      });
+      setToast(`${product.name} (${variant.sex}) adicionado`);
+    },
+    [cart]
+  );
 
   const setQty = (key, qty) =>
-    setCart((c) => (qty <= 0 ? c.filter((i) => i.key !== key) : c.map((i) => (i.key === key ? { ...i, qty } : i))));
+    setCart((c) =>
+      qty <= 0
+        ? c.filter((i) => i.key !== key)
+        : c.map((i) => (i.key === key ? { ...i, qty: i.stock ? Math.min(qty, i.stock) : qty } : i))
+    );
   const remove = (key) => setCart((c) => c.filter((i) => i.key !== key));
   const clear = () => setCart([]);
   const close = useCallback(() => setOpen(false), []);
+  const closeDetail = useCallback(() => setDetail(null), []);
 
   const count = cart.reduce((s, i) => s + i.qty, 0);
   const total = cart.reduce((s, i) => s + i.qty * i.price, 0);
-  const shown = useMemo(
-    () => (filter === 'Todos' ? PRODUCTS : PRODUCTS.filter((p) => p.category === filter)),
-    [filter]
-  );
+
+  const shown = useMemo(() => {
+    const list = filter === 'Todos' ? [...PRODUCTS] : PRODUCTS.filter((p) => p.category === filter);
+    if (sort === 'menor') list.sort((a, b) => cardPrice(a) - cardPrice(b));
+    if (sort === 'maior') list.sort((a, b) => cardPrice(b) - cardPrice(a));
+    if (sort === 'nome') list.sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
+    // vendidos sempre por último
+    return list.sort((a, b) => Boolean(a.sold) - Boolean(b.sold));
+  }, [filter, sort]);
+
+  const realCount = PRODUCTS.filter((p) => p.realPhoto && !p.sold).length;
+  const heroSingle = HERO_FISH.variants.length === 1;
 
   return (
     <>
+      <a href="#peixes" className="skip-link">
+        Ir para o catálogo
+      </a>
+
+      {/* ---------- Faixa de avisos ---------- */}
+      <div className="announce">
+        <div className="wrap announce-inner">
+          <span>Enviamos foto e vídeo do seu peixe antes de fechar</span>
+          <span className="announce-sep" aria-hidden="true">·</span>
+          <span>Garantia de chegada viva</span>
+        </div>
+      </div>
+
       {/* ---------- Cabeçalho ---------- */}
       <header className="topbar">
         <div className="wrap topbar-inner">
@@ -101,15 +222,32 @@ export default function App() {
               <span className="brand-b">bettas</span>
             </span>
           </a>
-          <nav className="nav">
-            <a href="#peixes">Peixes</a>
-            <a href="#como-comprar">Como comprar</a>
-            <a href="#cuidados">Cuidados</a>
+          <nav className={`nav ${menu ? 'is-open' : ''}`} aria-label="Seções do site">
+            {NAV.map((n) => (
+              <a key={n.href} href={n.href} onClick={() => setMenu(false)}>
+                {n.label}
+              </a>
+            ))}
           </nav>
           <button type="button" className="cart-btn" onClick={() => setOpen(true)} aria-label={`Abrir pedido, ${count} itens`}>
             <IconBag />
             <span className="cart-btn-label">Pedido</span>
             {count > 0 && <span className="cart-count">{count}</span>}
+          </button>
+          <button
+            type="button"
+            className="icon-btn menu-btn"
+            onClick={() => setMenu((m) => !m)}
+            aria-expanded={menu}
+            aria-label={menu ? 'Fechar menu' : 'Abrir menu'}
+          >
+            {menu ? (
+              <IconClose />
+            ) : (
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
+                <path d="M4 7h16M4 12h16M4 17h16" />
+              </svg>
+            )}
           </button>
         </div>
       </header>
@@ -129,7 +267,7 @@ export default function App() {
                 Bettas que parecem <em>pintados à mão</em>
               </h1>
               <p className="lead">
-                Crowntail, Dumbo, Red Dragon e outras linhagens criadas com cuidado, alimentação
+                Crowntail, Halfmoon, Dumbo e outras linhagens criadas com cuidado, alimentação
                 reforçada e água tratada. Escolha o seu, monte o pedido e finalize com a gente pelo WhatsApp.
               </p>
               <div className="hero-cta">
@@ -147,8 +285,8 @@ export default function App() {
               </div>
               <dl className="hero-facts">
                 <div>
-                  <dt>{PRODUCTS.length}</dt>
-                  <dd>linhagens disponíveis</dd>
+                  <dt>{PRODUCTS.filter((p) => !p.sold).length}</dt>
+                  <dd>bettas no catálogo</dd>
                 </div>
                 <div>
                   <dt>26–28 °C</dt>
@@ -162,19 +300,38 @@ export default function App() {
             </div>
 
             <div className="hero-visual">
-              <div className="medallion">
-                <div className="medallion-water">
+              <button
+                type="button"
+                className="medallion"
+                onClick={() => setDetail(HERO_FISH)}
+                aria-label={`Ver detalhes de ${HERO_FISH.name}`}
+              >
+                <span className="medallion-water">
                   {HERO_FISH.image ? (
-                    <img src={HERO_FISH.image} alt={`Betta ${HERO_FISH.name}`} className="hero-photo" />
+                    <img src={HERO_FISH.heroImage || HERO_FISH.image} alt={`Betta ${HERO_FISH.name}`} className="hero-photo" />
                   ) : (
                     <BettaArt art={HERO_FISH.art} className="hero-fish" />
                   )}
-                </div>
-              </div>
+                </span>
+              </button>
               <div className="hero-tag">
-                <span className="hero-tag-kicker">Destaque</span>
+                <span className="hero-tag-kicker">
+                  Destaque{HERO_FISH.realPhoto ? ' · foto real' : ''}
+                </span>
                 <strong>Betta {HERO_FISH.name}</strong>
-                <span>a partir de {formatBRL(Math.min(...HERO_FISH.variants.map((v) => v.price)))}</span>
+                <span>
+                  {heroSingle ? '' : 'a partir de '}
+                  {formatBRL(minPrice(HERO_FISH))}
+                  {HERO_FISH.stock === 1 ? ' · exemplar único' : ''}
+                </span>
+                <span className="hero-tag-actions">
+                  <button type="button" className="btn btn-red" onClick={() => add(HERO_FISH, HERO_FISH.variants[0])}>
+                    Quero este
+                  </button>
+                  <button type="button" className="link-btn" onClick={() => setDetail(HERO_FISH)}>
+                    Ver detalhes
+                  </button>
+                </span>
               </div>
             </div>
           </div>
@@ -221,36 +378,85 @@ export default function App() {
               <div>
                 <p className="eyebrow">Catálogo</p>
                 <h2>Peixes disponíveis</h2>
+                {realCount > 0 && (
+                  <p className="section-sub">
+                    {realCount} {realCount === 1 ? 'exemplar' : 'exemplares'} com foto real, prontos para envio.
+                  </p>
+                )}
               </div>
-              <div className="chips" role="tablist" aria-label="Filtrar por tipo de cauda">
-                {CATEGORIES.map((c) => (
-                  <button
-                    key={c}
-                    type="button"
-                    role="tab"
-                    aria-selected={filter === c}
-                    className={`chip ${filter === c ? 'is-active' : ''}`}
-                    onClick={() => setFilter(c)}
-                  >
-                    {c}
-                  </button>
-                ))}
+              <div className="toolbar">
+                <div className="chips" role="tablist" aria-label="Filtrar por tipo de cauda">
+                  {CATEGORIES.map((c) => (
+                    <button
+                      key={c}
+                      type="button"
+                      role="tab"
+                      aria-selected={filter === c}
+                      className={`chip ${filter === c ? 'is-active' : ''}`}
+                      onClick={() => setFilter(c)}
+                    >
+                      {c}
+                    </button>
+                  ))}
+                </div>
+                <label className="sort" htmlFor="sort">
+                  <span>Ordenar</span>
+                  <select id="sort" value={sort} onChange={(e) => setSort(e.target.value)}>
+                    {SORTS.map((s) => (
+                      <option key={s.id} value={s.id}>
+                        {s.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
               </div>
             </div>
             <div className="grid">
               {shown.map((p) => (
-                <ProductCard key={p.id} product={p} onAdd={add} />
+                <ProductCard key={p.id} product={p} onAdd={add} onOpen={setDetail} />
               ))}
             </div>
             <p className="muted small note">
-              Fotos de referência. Cada betta é único: cores e marcas variam de peixe para peixe.
-              Peça fotos e vídeo do seu antes de fechar.
+              Peixes com o selo “Foto real” são exatamente o exemplar que você recebe. Nos demais, a foto
+              é de referência da linhagem e cores e marcas variam de peixe para peixe.
             </p>
           </div>
         </section>
 
+        {/* ---------- Guia de caudas ---------- */}
+        <section className="section section-alt" id="caudas">
+          <div className="wrap">
+            <p className="eyebrow">Guia de caudas</p>
+            <h2>Entenda os nomes antes de escolher</h2>
+            <div className="tails">
+              {TAILS.map((t) => (
+                <article key={t.name} className="tail">
+                  <div className="tail-art">
+                    <BettaArt art={t.art} animate={false} />
+                  </div>
+                  <h3>
+                    {t.name} <span>{t.abbr}</span>
+                  </h3>
+                  <p>{t.text}</p>
+                  <button type="button" className="link-btn" onClick={() => { setFilter(t.name); document.getElementById('peixes')?.scrollIntoView(); }}>
+                    Ver {t.name} no catálogo
+                  </button>
+                </article>
+              ))}
+            </div>
+            <dl className="glossary">
+              {GLOSSARY.map(([term, def]) => (
+                <div key={term}>
+                  <dt>{term}</dt>
+                  <dd>{def}</dd>
+                </div>
+              ))}
+            </dl>
+          </div>
+        </section>
+
         {/* ---------- Como comprar ---------- */}
-        <section className="section section-alt" id="como-comprar">
+        <section className="section" id="como-comprar">
           <div className="wrap">
             <p className="eyebrow">Como comprar</p>
             <h2>Três passos até o seu aquário</h2>
@@ -258,7 +464,7 @@ export default function App() {
               <li>
                 <span className="step-n">1</span>
                 <h3>Escolha seus peixes</h3>
-                <p>Selecione macho ou fêmea e toque em “Adicionar”. Pode levar quantos quiser.</p>
+                <p>Abra os detalhes, selecione macho ou fêmea e toque em “Adicionar”.</p>
               </li>
               <li>
                 <span className="step-n">2</span>
@@ -280,33 +486,74 @@ export default function App() {
         </section>
 
         {/* ---------- Cuidados ---------- */}
-        <section className="section" id="cuidados">
-          <div className="wrap care-grid">
+        <section className="section section-alt" id="cuidados">
+          <div className="wrap">
+            <p className="eyebrow">Cuidados</p>
+            <h2>Do saquinho ao aquário</h2>
+            <p className="lead small-lead">
+              Bettas são resistentes, mas vivem mais e mostram cores mais fortes quando a água está
+              estável. Estes são os números e os passos que usamos aqui.
+            </p>
+
+            <dl className="params">
+              <div>
+                <dt>Temperatura</dt>
+                <dd>26–28 °C</dd>
+              </div>
+              <div>
+                <dt>pH</dt>
+                <dd>6,5–7,5</dd>
+              </div>
+              <div>
+                <dt>Aquário mínimo</dt>
+                <dd>10 litros</dd>
+              </div>
+              <div>
+                <dt>Alimentação</dt>
+                <dd>2× ao dia</dd>
+              </div>
+              <div>
+                <dt>Troca semanal</dt>
+                <dd>30% da água</dd>
+              </div>
+            </dl>
+
+            <div className="care-grid">
+              <div className="care-block">
+                <h3>Aclimatação: o dia da chegada</h3>
+                <ol className="acclim">
+                  {ACCLIMATION.map((s) => (
+                    <li key={s.t}>
+                      <strong>{s.t}</strong>
+                      <span>{s.d}</span>
+                    </li>
+                  ))}
+                </ol>
+              </div>
+              <div className="care-block">
+                <h3>O que ter em casa antes do peixe chegar</h3>
+                <ul className="checklist">
+                  {KIT.map((k) => (
+                    <li key={k}>
+                      <IconCheck width="18" height="18" />
+                      <span>{k}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* ---------- Dúvidas ---------- */}
+        <section className="section" id="duvidas">
+          <div className="wrap faq-wrap">
             <div>
-              <p className="eyebrow">Cuidados básicos</p>
-              <h2>O que seu betta precisa</h2>
+              <p className="eyebrow">Dúvidas frequentes</p>
+              <h2>Antes de pedir</h2>
               <p className="lead small-lead">
-                Bettas são resistentes, mas vivem mais e mostram cores mais fortes quando a água está
-                estável. Esses são os números que usamos aqui.
+                Não achou sua resposta? Chame no WhatsApp {STORE.whatsappDisplay}.
               </p>
-              <dl className="params">
-                <div>
-                  <dt>Temperatura</dt>
-                  <dd>26–28 °C</dd>
-                </div>
-                <div>
-                  <dt>pH</dt>
-                  <dd>6,5–7,5</dd>
-                </div>
-                <div>
-                  <dt>Aquário mínimo</dt>
-                  <dd>10 litros</dd>
-                </div>
-                <div>
-                  <dt>Alimentação</dt>
-                  <dd>2× ao dia</dd>
-                </div>
-              </dl>
             </div>
             <div className="faq">
               {FAQ.map((f) => (
@@ -341,28 +588,47 @@ export default function App() {
 
       {/* ---------- Rodapé ---------- */}
       <footer className="footer">
-        <div className="wrap footer-inner">
-          <div className="brand brand-footer">
-            <img src={LOGO} alt="" className="brand-logo" />
-            <span className="brand-word">
-              <span className="brand-z">Zaraki</span>
-              <span className="brand-b">bettas</span>
-            </span>
+        <div className="wrap footer-grid">
+          <div className="footer-brand">
+            <div className="brand brand-footer">
+              <img src={LOGO} alt="" className="brand-logo" />
+              <span className="brand-word">
+                <span className="brand-z">Zaraki</span>
+                <span className="brand-b">bettas</span>
+              </span>
+            </div>
+            <p className="muted">
+              Bettas selecionados, com envio seguro e atendimento direto pelo WhatsApp.
+            </p>
           </div>
-          <div className="footer-contact">
+          <nav className="footer-col" aria-label="Rodapé">
+            <h3>Navegação</h3>
+            {NAV.map((n) => (
+              <a key={n.href} href={n.href}>
+                {n.label}
+              </a>
+            ))}
+            <a href="#duvidas">Dúvidas frequentes</a>
+          </nav>
+          <div className="footer-col">
+            <h3>Contato</h3>
             <a href={whatsappLink()} target="_blank" rel="noopener noreferrer">
               <IconWhatsApp width="18" height="18" /> {STORE.whatsappDisplay}
             </a>
             <a href={STORE.instagram} target="_blank" rel="noopener noreferrer">
               <IconInstagram width="18" height="18" /> {STORE.instagramHandle}
             </a>
+            <span className="muted">{STORE.city}</span>
           </div>
-          <p className="muted small">© {new Date().getFullYear()} {STORE.name} · {STORE.city}</p>
+        </div>
+        <div className="wrap footer-base">
+          <p className="muted small">© {new Date().getFullYear()} {STORE.name}. Todos os direitos reservados.</p>
+          <p className="muted small">Pagamento e entrega combinados pelo WhatsApp.</p>
         </div>
       </footer>
 
       {/* ---------- Barra do carrinho (mobile) ---------- */}
-      {count > 0 && !open && (
+      {count > 0 && !open && !detail && (
         <button type="button" className="mobile-cart" onClick={() => setOpen(true)}>
           <span>
             <IconBag width="18" height="18" /> {count} {count === 1 ? 'peixe' : 'peixes'} · {formatBRL(total)}
@@ -390,6 +656,7 @@ export default function App() {
         )}
       </div>
 
+      <ProductModal product={detail} onClose={closeDetail} onAdd={add} />
       <CartDrawer open={open} onClose={close} items={cart} setQty={setQty} remove={remove} clear={clear} />
     </>
   );

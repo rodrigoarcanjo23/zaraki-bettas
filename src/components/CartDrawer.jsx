@@ -127,7 +127,12 @@ export default function CartDrawer({ open, onClose, items, setQty, remove, clear
                         −
                       </button>
                       <span>{it.qty}</span>
-                      <button type="button" onClick={() => setQty(it.key, it.qty + 1)} aria-label="Aumentar">
+                      <button
+                        type="button"
+                        onClick={() => setQty(it.key, it.qty + 1)}
+                        disabled={Boolean(it.stock) && it.qty >= it.stock}
+                        aria-label="Aumentar"
+                      >
                         +
                       </button>
                     </div>

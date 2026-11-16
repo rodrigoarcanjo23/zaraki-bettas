@@ -4,29 +4,57 @@
 //  o arquivo ou mude o caminho em  image.
 //  imagePos ajusta o enquadramento da foto no card (CSS object-position).
 //  Se  image  for null, o site desenha uma ilustração com as cores de  art.
+//
+//  Campos opcionais:
+//    featured: true   → peixe que aparece em destaque no topo do site (use em um só)
+//    heroImage        → foto quadrada usada no destaque do topo
+//    realPhoto: true  → mostra o selo "Foto real" (é exatamente o peixe da foto)
+//    stock: 1         → limita a quantidade no pedido
+//    sold: true       → mantém o peixe no catálogo marcado como "Vendido" 
 // ============================================================
 
 export const CATEGORIES = ['Todos', 'Crowntail', 'Dumbo', 'Halfmoon'];
 
 export const PRODUCTS = [
+  // ---------- Exemplares com foto real (estoque: 1 de cada) ----------
   {
-    id: 'red-dragon',
-    name: 'Red Dragon Crowntail',
+    id: 'ct-camboja-lt',
+    name: 'CT Camboja LT',
     category: 'Crowntail',
-    tagline: 'Escamas brancas metálicas sobre vermelho',
+    tagline: 'Corpo azul-ardósia, cabeça e coroa vermelhas',
     description:
-      'Escamas grossas e prateadas cobrem o corpo como uma armadura, com nadadeiras vermelho-escuro em coroa.',
+      'Crowntail de cauda longa com corpo azul-acinzentado, cabeça vermelha e coroa vermelha com base azul-clara.',
     size: '5–6 cm',
-    age: '5 meses',
+    age: 'Adulto',
     badge: 'Destaque',
-    image: '/peixes/red-dragon.jpg',
-    imagePos: '50% 45%',
-    variants: [
-      { sex: 'Macho', price: 120 },
-      { sex: 'Fêmea', price: 60 },
-    ],
-    art: { tail: 'crown', body: ['#f1ece6', '#c21d33'], fin: ['#d6182f', '#5e0715'], ears: false, scales: true },
+    featured: true,
+    heroImage: '/peixes/ct-camboja-lt-destaque.jpg',
+    realPhoto: true,
+    stock: 1,
+    image: '/peixes/ct-camboja-lt.jpg',
+    imagePos: '50% 50%',
+    variants: [{ sex: 'Macho', price: 80 }],
+    art: { tail: 'crown', body: ['#5a6c9a', '#2c3550'], fin: ['#d6182f', '#6a0616'], ears: false },
   },
+  {
+    id: 'ct-red-camboja-lt',
+    name: 'CT Red Camboja LT',
+    category: 'Crowntail',
+    tagline: 'Vermelho intenso com pontos perolados no corpo',
+    description:
+      'Crowntail de cauda longa, todo vermelho, com escamas pontilhadas em tom perolado e raios longos que se curvam nas pontas.',
+    size: '5–6 cm',
+    age: 'Adulto',
+    badge: null,
+    realPhoto: true,
+    stock: 1,
+    image: '/peixes/ct-red-camboja-lt.jpg',
+    imagePos: '50% 50%',
+    variants: [{ sex: 'Macho', price: 80 }],
+    art: { tail: 'crown', body: ['#e32a3a', '#8e0a1e'], fin: ['#ef2a3a', '#6a0616'], ears: false },
+  },
+
+  // ---------- Linhagens (fotos de referência) ----------
   {
     id: 'ct-super-red',
     name: 'Crowntail Super Red',
