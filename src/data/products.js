@@ -10,7 +10,12 @@
 //    heroImage        → foto quadrada usada no destaque do topo
 //    realPhoto: true  → mostra o selo "Foto real" (é exatamente o peixe da foto)
 //    stock: 1         → limita a quantidade no pedido
-//    sold: true       → mantém o peixe no catálogo marcado como "Vendido" 
+//    sold: true       → mantém o peixe no catálogo marcado como "Vendido",
+//                       com o botão "Avise-me" no lugar de "Adicionar"
+//    gallery: [...]   → fotos extras, mostradas na página de detalhes do peixe
+//                       ex.: gallery: ['/peixes/nome-2.jpg', '/peixes/nome-3.jpg']
+//    video            → vídeo curto do peixe (arquivo .mp4 em /public/videos/)
+//                       ex.: video: '/videos/nome.mp4'
 // ============================================================
 
 export const CATEGORIES = ['Todos', 'Crowntail', 'Dumbo', 'Halfmoon'];
@@ -32,6 +37,8 @@ export const PRODUCTS = [
     realPhoto: true,
     stock: 1,
     image: '/peixes/ct-camboja-lt.jpg',
+    gallery: ['/peixes/ct-camboja-lt-destaque.jpg', '/peixes/ct-camboja-lt-inteira.jpg'],
+    video: null,
     imagePos: '50% 50%',
     variants: [{ sex: 'Macho', price: 80 }],
     art: { tail: 'crown', body: ['#5a6c9a', '#2c3550'], fin: ['#d6182f', '#6a0616'], ears: false },
@@ -49,6 +56,8 @@ export const PRODUCTS = [
     realPhoto: true,
     stock: 1,
     image: '/peixes/ct-red-camboja-lt.jpg',
+    gallery: ['/peixes/ct-red-camboja-lt-detalhe.jpg', '/peixes/ct-red-camboja-lt-inteira.jpg'],
+    video: null,
     imagePos: '50% 50%',
     variants: [{ sex: 'Macho', price: 80 }],
     art: { tail: 'crown', body: ['#e32a3a', '#8e0a1e'], fin: ['#ef2a3a', '#6a0616'], ears: false },

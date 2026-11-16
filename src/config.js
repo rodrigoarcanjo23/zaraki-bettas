@@ -23,5 +23,12 @@ export function whatsappLink(message = '') {
   return `https://wa.me/${STORE.whatsapp}${text}`;
 }
 
+// Link do botão "Avise-me" dos peixes vendidos
+export function notifyLink(product) {
+  return whatsappLink(
+    `Olá, ${STORE.name}! Vi no site que o Betta ${product.name} já foi vendido. Pode me avisar quando chegar um parecido?`
+  );
+}
+
 export const formatBRL = (value) =>
   value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });

@@ -1,0 +1,2 @@
+Coloque aqui os vídeos dos peixes (.mp4, de preferência com menos de 10 MB cada).
+Depois, em src/data/products.js, preencha no peixe:  video: '/videos/nome-do-arquivo.mp4'

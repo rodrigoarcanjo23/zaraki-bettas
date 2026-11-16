@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import BettaArt from './BettaArt.jsx';
-import { formatBRL } from '../config.js';
+import { formatBRL, notifyLink } from '../config.js';
 
 export function Badges({ product }) {
   if (!product.badge && !product.realPhoto && !product.sold) return null;
@@ -16,6 +16,7 @@ export function Badges({ product }) {
 export default function ProductCard({ product, onAdd, onOpen }) {
   const [variantIdx, setVariantIdx] = useState(0);
   const variant = product.variants[variantIdx];
+  const extraPhotos = (product.gallery || []).length;
 
   return (
     <article className={`card ${product.sold ? 'is-sold' : ''}`}>
@@ -35,6 +36,13 @@ export default function ProductCard({ product, onAdd, onOpen }) {
           />
         ) : (
           <BettaArt art={product.art} />
+        )}
+        {(extraPhotos > 0 || product.video) && (
+          <span className="card-media-count">
+            {product.video ? '▶ Vídeo' : ''}
+            {product.video && extraPhotos > 0 ? ' · ' : ''}
+            {extraPhotos > 0 ? `${extraPhotos + 1} fotos` : ''}
+          </span>
         )}
         <span className="card-zoom">Ver detalhes</span>
       </button>
@@ -85,17 +93,18 @@ export default function ProductCard({ product, onAdd, onOpen }) {
 
         <div className="card-foot">
           <p className="price">
-            <span className="price-label">{variant.sex}</span>
+            <span className="price-label">{product.sold ? 'Vendido por' : variant.sex}</span>
             {formatBRL(variant.price)}
           </p>
-          <button
-            type="button"
-            className="btn btn-red"
-            disabled={product.sold}
-            onClick={() => onAdd(product, variant)}
-          >
-            {product.sold ? 'Vendido' : 'Adicionar'}
-          </button>
+          {product.sold ? (
+            <a className="btn btn-ghost" href={notifyLink(product)} target="_blank" rel="noopener noreferrer">
+              Avise-me
+            </a>
+          ) : (
+            <button type="button" className="btn btn-red" onClick={() => onAdd(product, variant)}>
+              Adicionar
+            </button>
+          )}
         </div>
       </div>
     </article>
