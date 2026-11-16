@@ -1,6 +1,9 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App.jsx';
+
+// O painel só é baixado por quem abre  /?painel
+const Painel = React.lazy(() => import('./painel/Painel.jsx'));
 import './index.css';
 
 // Contador de visitas da Vercel (Web Analytics). Só carrega no site publicado.
@@ -16,6 +19,13 @@ if (import.meta.env.PROD && !/^(localhost|127\.)/.test(window.location.hostname)
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
-    <App />
+    {/* O painel do lojista abre em  SEU-SITE/?painel  */}
+    {new URLSearchParams(window.location.search).has('painel') ? (
+      <React.Suspense fallback={null}>
+        <Painel />
+      </React.Suspense>
+    ) : (
+      <App />
+    )}
   </React.StrictMode>
 );

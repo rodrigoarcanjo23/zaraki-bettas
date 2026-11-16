@@ -6,8 +6,9 @@ import CartDrawer from './components/CartDrawer.jsx';
 import {
   IconBag, IconWhatsApp, IconTruck, IconShield, IconDrop, IconCrown, IconInstagram, IconCheck, IconClose,
 } from './components/Icons.jsx';
-import { PRODUCTS, CATEGORIES } from './data/products.js';
-import { DEPOIMENTOS } from './data/depoimentos.js';
+import { PRODUCTS, isAccessory, fullName } from './data/products.js';
+import { DEPOIMENTOS, INSTAGRAM_POSTS } from './data/depoimentos.js';
+import InstagramFeed from './components/InstagramFeed.jsx';
 import { STORE, whatsappLink, formatBRL } from './config.js';
 
 const LOGO = '/logo.jpg';
@@ -25,7 +26,7 @@ function loadCart() {
         const qty = product.stock ? Math.min(item.qty, product.stock) : item.qty;
         return {
           key: item.key, id: product.id, name: product.name, sex: variant.sex, price: variant.price,
-          art: product.art, image: product.image, stock: product.stock || null, qty,
+          fullName: fullName(product), art: product.art, image: product.image, stock: product.stock || null, qty,
         };
       })
       .filter(Boolean);
@@ -37,7 +38,11 @@ function loadCart() {
 const minPrice = (p) => Math.min(...p.variants.map((v) => v.price));
 // preço mostrado no card (primeira opção), usado na ordenação
 const cardPrice = (p) => p.variants[0].price;
-const HERO_FISH = PRODUCTS.find((p) => p.featured && !p.sold) || PRODUCTS.find((p) => !p.sold) || PRODUCTS[0];
+const FISH = PRODUCTS.filter((p) => !isAccessory(p));
+const ACCESSORIES = PRODUCTS.filter((p) => isAccessory(p) && !p.sold);
+const HERO_FISH = FISH.find((p) => p.featured && !p.sold) || FISH.find((p) => !p.sold) || FISH[0] || PRODUCTS[0];
+// Filtros do catálogo: só as categorias que têm peixe disponível.
+const CATEGORIES = ['Todos', ...new Set(FISH.filter((p) => !p.sold).map((p) => p.category))];
 
 const SORTS = [
   { id: 'destaque', label: 'Destaques primeiro' },
@@ -175,7 +180,7 @@ export default function App() {
           ...c,
           {
             key, id: product.id, name: product.name, sex: variant.sex, price: variant.price,
-            art: product.art, image: product.image, stock: product.stock || null, qty: 1,
+            fullName: fullName(product), art: product.art, image: product.image, stock: product.stock || null, qty: 1,
           },
         ];
       });
@@ -218,7 +223,7 @@ export default function App() {
   const total = cart.reduce((s, i) => s + i.qty * i.price, 0);
 
   const shown = useMemo(() => {
-    const available = PRODUCTS.filter((p) => !p.sold);
+    const available = FISH.filter((p) => !p.sold);
     const list = filter === 'Todos' ? available : available.filter((p) => p.category === filter);
     if (sort === 'menor') list.sort((a, b) => cardPrice(a) - cardPrice(b));
     if (sort === 'maior') list.sort((a, b) => cardPrice(b) - cardPrice(a));
@@ -226,9 +231,9 @@ export default function App() {
     return list;
   }, [filter, sort]);
 
-  const soldList = PRODUCTS.filter((p) => p.sold);
+  const soldList = FISH.filter((p) => p.sold);
 
-  const realCount = PRODUCTS.filter((p) => p.realPhoto && !p.sold).length;
+  const realCount = FISH.filter((p) => p.realPhoto && !p.sold).length;
   const heroSingle = HERO_FISH.variants.length === 1;
 
   return (
@@ -319,7 +324,7 @@ export default function App() {
               </div>
               <dl className="hero-facts">
                 <div>
-                  <dt>{PRODUCTS.filter((p) => !p.sold).length}</dt>
+                  <dt>{FISH.filter((p) => !p.sold).length}</dt>
                   <dd>bettas disponíveis</dd>
                 </div>
                 <div>
@@ -342,7 +347,7 @@ export default function App() {
               >
                 <span className="medallion-water">
                   {HERO_FISH.image ? (
-                    <img src={HERO_FISH.heroImage || HERO_FISH.image} alt={`Betta ${HERO_FISH.name}`} className="hero-photo" />
+                    <img src={HERO_FISH.heroImage || HERO_FISH.image} alt={fullName(HERO_FISH)} className="hero-photo" />
                   ) : (
                     <BettaArt art={HERO_FISH.art} className="hero-fish" />
                   )}
@@ -352,7 +357,7 @@ export default function App() {
                 <span className="hero-tag-kicker">
                   Destaque{HERO_FISH.realPhoto ? ' · foto real' : ''}
                 </span>
-                <strong>Betta {HERO_FISH.name}</strong>
+                <strong>{fullName(HERO_FISH)}</strong>
                 <span>
                   {heroSingle ? '' : 'a partir de '}
                   {formatBRL(minPrice(HERO_FISH))}
@@ -481,6 +486,22 @@ export default function App() {
               </p>
               <div className="grid sold-grid">
                 {soldList.map((p) => (
+                  <ProductCard key={p.id} product={p} onAdd={add} onOpen={setDetail} />
+                ))}
+              </div>
+            </div>
+          </section>
+        )}
+
+        {/* ---------- Acessórios (aparece quando há itens da categoria "Acessório") ---------- */}
+        {ACCESSORIES.length > 0 && (
+          <section className="section sold-section" id="acessorios">
+            <div className="wrap">
+              <p className="eyebrow">Para o aquário</p>
+              <h2>Leve junto com o seu betta</h2>
+              <p className="section-sub">Ração, condicionador e outros itens entregues no mesmo pedido.</p>
+              <div className="grid sold-grid">
+                {ACCESSORIES.map((p) => (
                   <ProductCard key={p.id} product={p} onAdd={add} onOpen={setDetail} />
                 ))}
               </div>
@@ -671,6 +692,25 @@ export default function App() {
           </div>
         </section>
 
+        {/* ---------- Instagram ---------- */}
+        <section className="section section-alt" id="instagram">
+          <div className="wrap">
+            <div className="insta-head">
+              <div>
+                <p className="eyebrow">Instagram</p>
+                <h2>Acompanhe a criação no Instagram</h2>
+                <p className="section-sub">
+                  Peixes novos e vídeos aparecem primeiro por lá.
+                </p>
+              </div>
+              <a href={STORE.instagram} target="_blank" rel="noopener noreferrer" className="btn btn-outline btn-lg">
+                <IconInstagram /> Seguir {STORE.instagramHandle}
+              </a>
+            </div>
+            <InstagramFeed posts={INSTAGRAM_POSTS} />
+          </div>
+        </section>
+
         {/* ---------- CTA final ---------- */}
         <section className="cta-band">
           <div className="wrap cta-inner">
@@ -686,9 +726,6 @@ export default function App() {
               className="btn btn-wa btn-lg"
             >
               <IconWhatsApp /> Pedir fotos
-            </a>
-            <a href={STORE.instagram} target="_blank" rel="noopener noreferrer" className="btn btn-outline btn-lg">
-              <IconInstagram /> Seguir no Instagram
             </a>
           </div>
         </section>
@@ -731,7 +768,12 @@ export default function App() {
         </div>
         <div className="wrap footer-base">
           <p className="muted small">© {new Date().getFullYear()} {STORE.name}. Todos os direitos reservados.</p>
-          <p className="muted small">Entregas em {STORE.deliveryArea}.</p>
+          <p className="muted small">
+            Entregas em {STORE.deliveryArea}. ·{' '}
+            <a href="/?painel" className="footer-admin">
+              Área do lojista
+            </a>
+          </p>
         </div>
       </footer>
 
@@ -739,7 +781,7 @@ export default function App() {
       {count > 0 && !open && !detail && (
         <button type="button" className="mobile-cart" onClick={() => setOpen(true)}>
           <span>
-            <IconBag width="18" height="18" /> {count} {count === 1 ? 'peixe' : 'peixes'} · {formatBRL(total)}
+            <IconBag width="18" height="18" /> {count} {count === 1 ? 'item' : 'itens'} · {formatBRL(total)}
           </span>
           <strong>Ver pedido</strong>
         </button>

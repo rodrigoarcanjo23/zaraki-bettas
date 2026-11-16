@@ -1,3 +1,5 @@
+import { fullName } from './data/products.js';
+
 // ============================================================
 //  CONFIGURAÇÕES DA LOJA — edite aqui
 // ============================================================
@@ -12,8 +14,8 @@ export const STORE = {
   // Como o número aparece escrito no site
   whatsappDisplay: '(85) 9292-7935',
 
-  instagram: 'https://instagram.com/zarakibettas',
-  instagramHandle: '@zarakibettas',
+  instagram: 'https://www.instagram.com/zaraki_bettas/',
+  instagramHandle: '@zaraki_bettas',
 
   city: 'Fortaleza – CE',
 
@@ -53,7 +55,7 @@ export function whatsappLink(message = '') {
 // Link do botão "Avise-me" dos peixes vendidos
 export function notifyLink(product) {
   return whatsappLink(
-    `Olá, ${STORE.name}! Vi no site que o Betta ${product.name} já foi vendido. Pode me avisar quando chegar um parecido?`
+    `Olá, ${STORE.name}! Vi no site que ${fullName(product)} já foi vendido. Pode me avisar quando chegar um parecido?`
   );
 }
 

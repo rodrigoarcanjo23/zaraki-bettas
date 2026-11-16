@@ -3,6 +3,7 @@ import BettaArt from './BettaArt.jsx';
 import { Badges } from './ProductCard.jsx';
 import { IconClose, IconWhatsApp } from './Icons.jsx';
 import { STORE, formatBRL, whatsappLink, notifyLink } from '../config.js';
+import { fullName, isAccessory, DEFAULT_ART } from '../data/products.js';
 
 const PlayIcon = (p) => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" {...p}>
@@ -48,7 +49,7 @@ export default function ProductModal({ product, onClose, onAdd }) {
 
   const share = async () => {
     const url = window.location.href;
-    const data = { title: `Betta ${product.name} | ${STORE.name}`, text: `Olha este betta da ${STORE.name}: ${product.name}`, url };
+    const data = { title: `${fullName(product)} | ${STORE.name}`, text: `Olha isto na ${STORE.name}: ${fullName(product)}`, url };
     try {
       if (navigator.share) {
         await navigator.share(data);
@@ -64,7 +65,8 @@ export default function ProductModal({ product, onClose, onAdd }) {
   };
   const variant = product.variants[variantIdx] || product.variants[0];
   const current = media[mediaIdx];
-  const ask = `Olá, ${STORE.name}! Tenho interesse no Betta ${product.name} (${variant.sex}). Pode me mandar mais fotos e vídeo?`;
+  const accessory = isAccessory(product);
+  const ask = `Olá, ${STORE.name}! Tenho interesse em: ${fullName(product)} (${variant.sex}). Pode me mandar mais fotos e vídeo?`;
 
   return (
     <div className="modal-root" role="dialog" aria-modal="true" aria-label={product.name}>
@@ -77,12 +79,12 @@ export default function ProductModal({ product, onClose, onAdd }) {
         <div className="modal-gallery">
           <div className={`modal-media ${product.sold ? 'is-sold' : ''}`}>
             <Badges product={product} />
-            {!current && <BettaArt art={product.art} />}
+            {!current && <BettaArt art={product.art || DEFAULT_ART} />}
             {current?.type === 'photo' && (
               <img
                 key={current.src}
                 src={current.src}
-                alt={`Betta ${product.name}, foto ${mediaIdx + 1} de ${media.length}`}
+                alt={`${fullName(product)}, foto ${mediaIdx + 1} de ${media.length}`}
                 className={tall ? 'is-tall' : ''}
                 onLoad={(e) => setTall(e.target.naturalHeight > e.target.naturalWidth * 1.15)}
               />
@@ -147,17 +149,21 @@ export default function ProductModal({ product, onClose, onAdd }) {
 
           <dl className="modal-specs">
             <div>
-              <dt>Cauda</dt>
+              <dt>{accessory || product.category === 'Casal' ? 'Categoria' : 'Cauda'}</dt>
               <dd>{product.category}</dd>
             </div>
-            <div>
-              <dt>Tamanho</dt>
-              <dd>{product.size}</dd>
-            </div>
-            <div>
-              <dt>Idade</dt>
-              <dd>{product.age}</dd>
-            </div>
+            {product.size && (
+              <div>
+                <dt>Tamanho</dt>
+                <dd>{product.size}</dd>
+              </div>
+            )}
+            {product.age && (
+              <div>
+                <dt>Idade</dt>
+                <dd>{product.age}</dd>
+              </div>
+            )}
             <div>
               <dt>Disponibilidade</dt>
               <dd>{product.sold ? 'Vendido' : product.stock === 1 ? 'Exemplar único' : 'Sob consulta'}</dd>
@@ -166,10 +172,12 @@ export default function ProductModal({ product, onClose, onAdd }) {
 
           <p className="modal-photo-note">
             {product.sold
-              ? 'Este peixe já foi vendido. Toque em “Avise-me” e chamamos você quando chegar um parecido.'
-              : product.realPhoto
-                ? 'Foto real: você recebe exatamente este peixe.'
-                : 'Foto de referência da linhagem. Enviamos foto e vídeo do seu peixe antes de fechar.'}
+              ? 'Este item já foi vendido. Toque em “Avise-me” e chamamos você quando chegar um parecido.'
+              : accessory
+                ? 'Produto entregue junto com o seu pedido. Tire dúvidas pelo WhatsApp.'
+                : product.realPhoto
+                  ? 'Foto real: você recebe exatamente este peixe.'
+                  : 'Foto de referência da linhagem. Enviamos foto e vídeo do seu peixe antes de fechar.'}
           </p>
 
           {!product.sold && product.variants.length > 1 && (
@@ -215,11 +223,11 @@ export default function ProductModal({ product, onClose, onAdd }) {
           <div className="modal-links">
             {!product.sold && (
               <a className="modal-ask" href={whatsappLink(ask)} target="_blank" rel="noopener noreferrer">
-                <IconWhatsApp width="18" height="18" /> Pedir mais fotos e vídeo
+                <IconWhatsApp width="18" height="18" /> {accessory ? 'Tirar dúvida sobre este produto' : 'Pedir mais fotos e vídeo'}
               </a>
             )}
             <button type="button" className="link-btn" onClick={share}>
-              {shared === 'ok' ? 'Link copiado' : shared === 'erro' ? 'Copie o endereço da página' : 'Compartilhar este peixe'}
+              {shared === 'ok' ? 'Link copiado' : shared === 'erro' ? 'Copie o endereço da página' : 'Compartilhar'}
             </button>
           </div>
         </div>

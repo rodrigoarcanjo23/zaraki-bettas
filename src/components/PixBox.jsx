@@ -83,7 +83,7 @@ export default function PixBox({ total, pickup }) {
           </div>
           {total > 0 && (
             <div>
-              <dt>Total dos peixes</dt>
+              <dt>Total do pedido</dt>
               <dd>{formatBRL(total)}{pickup ? '' : ' + entrega'}</dd>
             </div>
           )}

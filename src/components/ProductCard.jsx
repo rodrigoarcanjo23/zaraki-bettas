@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import BettaArt from './BettaArt.jsx';
 import { formatBRL, notifyLink } from '../config.js';
+import { fullName, DEFAULT_ART } from '../data/products.js';
 
 export function Badges({ product }) {
   if (!product.badge && !product.realPhoto && !product.sold) return null;
@@ -30,12 +31,12 @@ export default function ProductCard({ product, onAdd, onOpen }) {
         {product.image ? (
           <img
             src={product.image}
-            alt={`Betta ${product.name}`}
+            alt={fullName(product)}
             loading="lazy"
             style={{ objectPosition: product.imagePos || 'center' }}
           />
         ) : (
-          <BettaArt art={product.art} />
+          <BettaArt art={product.art || DEFAULT_ART} />
         )}
         {(extraPhotos > 0 || product.video) && (
           <span className="card-media-count">
@@ -58,16 +59,22 @@ export default function ProductCard({ product, onAdd, onOpen }) {
           <p className="card-tagline">{product.tagline}</p>
         </div>
 
-        <dl className="card-specs">
-          <div>
-            <dt>Tamanho</dt>
-            <dd>{product.size}</dd>
-          </div>
-          <div>
-            <dt>Idade</dt>
-            <dd>{product.age}</dd>
-          </div>
-        </dl>
+        {(product.size || product.age) && (
+          <dl className="card-specs">
+            {product.size && (
+              <div>
+                <dt>Tamanho</dt>
+                <dd>{product.size}</dd>
+              </div>
+            )}
+            {product.age && (
+              <div>
+                <dt>Idade</dt>
+                <dd>{product.age}</dd>
+              </div>
+            )}
+          </dl>
+        )}
 
         {product.variants.length === 1 ? (
           <p className="single-note">

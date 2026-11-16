@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import BettaArt from './BettaArt.jsx';
+import { DEFAULT_ART } from '../data/products.js';
 import { IconClose, IconTrash, IconWhatsApp, IconCheck } from './Icons.jsx';
 import PixBox from './PixBox.jsx';
 import { STORE, formatBRL, whatsappLink } from '../config.js';
@@ -8,7 +9,7 @@ const DELIVERY = ['Retirada', 'Entrega em Fortaleza', 'Entrega na Região Metrop
 
 function buildMessage(items, total, form, code) {
   const lines = items.map(
-    (it) => `• ${it.qty}x Betta ${it.name} (${it.sex}) — ${formatBRL(it.price * it.qty)}`
+    (it) => `• ${it.qty}x ${it.fullName || it.name} (${it.sex}) — ${formatBRL(it.price * it.qty)}`
   );
   return [
     `Olá, ${STORE.name}! Quero fazer um pedido.`,
@@ -16,7 +17,7 @@ function buildMessage(items, total, form, code) {
     `*Pedido ${code}*`,
     ...lines,
     '',
-    `*Total dos peixes:* ${formatBRL(total)}`,
+    `*Total do pedido:* ${formatBRL(total)}`,
     '',
     `*Nome:* ${form.name}`,
     `*Cidade/Bairro:* ${form.city}`,
@@ -117,7 +118,7 @@ export default function CartDrawer({ open, onClose, items, setQty, remove, clear
               {items.map((it) => (
                 <li key={it.key} className="cart-item">
                   <div className="cart-thumb">
-                    {it.image ? <img src={it.image} alt="" /> : <BettaArt art={it.art} animate={false} />}
+                    {it.image ? <img src={it.image} alt="" /> : <BettaArt art={it.art || DEFAULT_ART} animate={false} />}
                   </div>
                   <div className="cart-info">
                     <p className="cart-name">{it.name}</p>
@@ -151,7 +152,7 @@ export default function CartDrawer({ open, onClose, items, setQty, remove, clear
 
             <div className="cart-total">
               <span>
-                {count} {count === 1 ? 'peixe' : 'peixes'}
+                {count} {count === 1 ? 'item' : 'itens'}
               </span>
               <strong>{formatBRL(total)}</strong>
             </div>
