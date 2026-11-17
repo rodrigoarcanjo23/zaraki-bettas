@@ -10,6 +10,7 @@
 //    GITHUB_BRANCH    opcional, padrão "main"
 // ============================================================
 import crypto from 'node:crypto';
+import { del } from '@vercel/blob';
 
 const REPO = process.env.GITHUB_REPO || 'rodrigoarcanjo23/zaraki-bettas';
 const BRANCH = process.env.GITHUB_BRANCH || 'main';
@@ -49,10 +50,16 @@ async function gh(path, options = {}) {
 
 // ---------- validação do que chega do painel ----------
 const str = (v, max) => (typeof v === 'string' ? v.trim().slice(0, max) : '');
+// Endereço de arquivo aceito: um arquivo do próprio site (/peixes/x.jpg)
+// ou um arquivo enviado pelo painel para o Vercel Blob.
+const BLOB_URL = /^https:\/\/[a-z0-9]+\.public\.blob\.vercel-storage\.com\/([a-z]+)\/[A-Za-z0-9._-]+$/;
 const mediaPath = (v, folders) => {
-  const s = str(v, 200);
-  return new RegExp(`^/(${folders})/[A-Za-z0-9._-]+\\.(jpg|jpeg|png|webp|mp4)$`).test(s) ? s : null;
+  const s = str(v, 300);
+  if (new RegExp(`^/(${folders})/[A-Za-z0-9._-]+\\.(jpg|jpeg|png|webp|mp4|mov|webm)$`).test(s)) return s;
+  const blob = s.match(BLOB_URL);
+  return blob && folders.split('|').includes(blob[1]) ? s : null;
 };
+const blobUrlsIn = (catalog) => new Set((JSON.stringify(catalog).match(/https:\/\/[a-z0-9]+\.public\.blob\.vercel-storage\.com\/[A-Za-z0-9/._-]+/g) || []));
 
 function cleanProduct(p) {
   const id = str(p.id, 60).toLowerCase();
@@ -138,13 +145,18 @@ function cleanFiles(files) {
 // ---------- ações ----------
 async function carregar() {
   const file = await gh(`/contents/${CATALOG_PATH}?ref=${encodeURIComponent(BRANCH)}`);
-  return { catalog: JSON.parse(Buffer.from(file.content, 'base64').toString('utf8')) };
+  return {
+    catalog: JSON.parse(Buffer.from(file.content, 'base64').toString('utf8')),
+    // avisa o painel se o envio de fotos e vídeos pelo Vercel Blob está ligado
+    blob: Boolean(process.env.BLOB_READ_WRITE_TOKEN),
+  };
 }
 
 // Grava catálogo e fotos em UM commit só, para a Vercel publicar uma vez.
 async function salvar(body) {
   const catalog = cleanCatalog(body.catalog);
   const files = cleanFiles(body.files);
+  const before = await carregar().then((r) => blobUrlsIn(r.catalog)).catch(() => new Set());
   const ref = await gh(`/git/ref/heads/${encodeURIComponent(BRANCH)}`);
   const parent = ref.object.sha;
   const commit = await gh(`/git/commits/${parent}`);
@@ -161,7 +173,16 @@ async function salvar(body) {
     body: JSON.stringify({ message: 'Painel: atualiza o catálogo', tree: newTree.sha, parents: [parent] }),
   });
   await gh(`/git/refs/heads/${encodeURIComponent(BRANCH)}`, { method: 'PATCH', body: JSON.stringify({ sha: newCommit.sha }) });
-  return { ok: true, catalog };
+
+  // Apaga do Vercel Blob as fotos e vídeos que saíram do catálogo, para não ocupar espaço.
+  // Só depois de gravar no GitHub; se falhar, o catálogo já está salvo do mesmo jeito.
+  const after = blobUrlsIn(catalog);
+  const removed = [...before].filter((u) => !after.has(u));
+  if (removed.length && process.env.BLOB_READ_WRITE_TOKEN) {
+    // no máximo 5 segundos: se o Blob demorar, a publicação não fica esperando
+    await Promise.race([del(removed).catch(() => {}), new Promise((r) => setTimeout(r, 5000))]);
+  }
+  return { ok: true, catalog, blob: Boolean(process.env.BLOB_READ_WRITE_TOKEN) };
 }
 
 export default async function handler(req, res) {

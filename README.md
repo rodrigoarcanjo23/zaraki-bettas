@@ -15,7 +15,7 @@ Abra o endereço que aparecer (geralmente http://localhost:5173).
 
 Endereço: `https://SEU-SITE/?painel` (também há o link "Área do lojista" no rodapé).
 
-No painel você cadastra e edita peixes, casais e acessórios, envia fotos, marca como vendido, escolhe o destaque do topo, reordena o catálogo, cadastra depoimentos e escolhe as publicações do Instagram que aparecem no site. Ao clicar em **Publicar**, o site atualiza sozinho em 1 a 2 minutos.
+No painel você cadastra e edita peixes, casais e acessórios, envia fotos e vídeos direto do celular (gravando na hora ou escolhendo da galeria), marca como vendido, escolhe o destaque do topo, reordena o catálogo, cadastra depoimentos e escolhe as publicações do Instagram que aparecem no site. Ao clicar em **Publicar**, o site atualiza sozinho em 1 a 2 minutos.
 
 ### Configurar o painel (uma vez só)
 
@@ -29,12 +29,20 @@ No painel você cadastra e edita peixes, casais e acessórios, envia fotos, marc
      - `ADMIN_PASSWORD`: a senha que você vai usar para entrar no painel. Escolha uma senha longa.
      - `GITHUB_TOKEN`: o token copiado no passo 1.
    - Depois vá em **Deployments** → no último deploy, **⋯** → **Redeploy**.
-3. Abra `https://SEU-SITE/?painel` e entre com a senha.
+3. **Ligar o envio de fotos e vídeos pelo celular (Vercel Blob)**
+   - Na Vercel, abra o projeto → **Storage** → **Create Database** (ou **Connect Store**) → **Blob** → **Create**.
+   - Conecte ao projeto `zaraki-bettas` (ambiente **Production**). A Vercel cria sozinha a variável `BLOB_READ_WRITE_TOKEN`.
+   - Faça um novo deploy (**Deployments** → **⋯** → **Redeploy**).
+4. Abra `https://SEU-SITE/?painel` e entre com a senha.
 
 Importante:
 - Não escreva a senha nem o token em nenhum arquivo do projeto. Eles ficam só na Vercel.
 - O painel grava direto no GitHub. Antes de alterar arquivos no computador, rode `git pull` para baixar o que foi feito pelo painel.
-- Vídeos não são enviados pelo painel (são arquivos grandes). Coloque o `.mp4` em `public/videos/`, envie com `git push` e escreva o caminho no campo "Vídeo" do item.
+- Fotos e vídeos enviados pelo painel ficam guardados no Vercel Blob. As fotos são reduzidas no próprio celular antes de subir (ficam com 200 a 500 KB).
+- Vídeos: até 60 MB cada (cerca de 30 segundos em 1080p). Vídeos curtos carregam mais rápido para o cliente e gastam menos da cota gratuita da Vercel.
+- Quando uma foto ou vídeo é trocado ou removido e você publica, o arquivo antigo é apagado do Blob para não ocupar espaço.
+- O plano gratuito da Vercel tem limite de armazenamento e de tráfego do Blob por mês. Acompanhe em **Storage** → seu Blob → **Usage**.
+- Sem o Blob conectado, o painel continua funcionando: as fotos vão pelo GitHub (umas 8 por publicação) e o envio de vídeo fica desligado.
 - O painel só funciona no site publicado, não com `npm run dev`.
 
 ## Onde editar cada coisa (pelos arquivos)

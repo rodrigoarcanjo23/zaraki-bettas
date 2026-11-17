@@ -90,7 +90,7 @@ export default function ProductModal({ product, onClose, onAdd }) {
               />
             )}
             {current?.type === 'video' && (
-              <video key={current.src} src={current.src} controls autoPlay muted loop playsInline poster={product.image || undefined} />
+              <video key={current.src} src={current.src} controls autoPlay muted loop playsInline preload="metadata" poster={product.image || undefined} />
             )}
             {media.length > 1 && (
               <>

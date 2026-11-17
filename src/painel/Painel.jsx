@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { upload } from '@vercel/blob/client';
 import { ALL_CATEGORIES, ACCESSORY } from '../data/products.js';
 import { formatBRL } from '../config.js';
 import './painel.css';
@@ -11,7 +12,24 @@ import './painel.css';
 // ============================================================
 
 const PASS_KEY = 'zaraki-painel';
-const MAX_UPLOAD = 3.6 * 1024 * 1024; // limite seguro por publicação
+const MB = 1024 * 1024;
+const MAX_UPLOAD = 3.6 * MB; // limite por publicação quando as fotos vão pelo GitHub (sem Vercel Blob)
+const MAX_VIDEO = 60 * MB; // mesmo limite de api/upload.js
+
+// Extensão do vídeo a partir do tipo do arquivo (iPhone grava .mov, Android .mp4).
+function videoExt(file) {
+  const byType = { 'video/mp4': 'mp4', 'video/quicktime': 'mov', 'video/webm': 'webm' }[file.type];
+  if (byType) return byType;
+  const m = file.name.toLowerCase().match(/\.(mp4|mov|webm)$/);
+  return m ? m[1] : null;
+}
+const toDataUrl = (blob) =>
+  new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => resolve(r.result);
+    r.onerror = () => reject(new Error('Não consegui ler a foto.'));
+    r.readAsDataURL(blob);
+  });
 
 async function api(action, password, extra = {}) {
   let res;
@@ -45,6 +63,7 @@ const slug = (text) =>
 const rand = () => Math.random().toString(36).slice(2, 7);
 
 // Reduz a foto no próprio navegador antes de enviar (máx. 1400 px, JPEG).
+// Uma foto de celular de 4 a 8 MB vira algo entre 200 e 500 KB.
 function shrink(file, max = 1400) {
   return new Promise((resolve, reject) => {
     const img = new Image();
@@ -56,11 +75,11 @@ function shrink(file, max = 1400) {
       canvas.height = Math.round(img.height * k);
       canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
       URL.revokeObjectURL(url);
-      resolve(canvas.toDataURL('image/jpeg', 0.84));
+      canvas.toBlob((blob) => (blob ? resolve(blob) : reject(new Error('Não consegui preparar a foto.'))), 'image/jpeg', 0.84);
     };
     img.onerror = () => {
       URL.revokeObjectURL(url);
-      reject(new Error('Não consegui abrir essa imagem. Use JPG ou PNG.'));
+      reject(new Error('Não consegui abrir essa imagem. Use uma foto JPG ou PNG.'));
     };
     img.src = url;
   });
@@ -96,25 +115,26 @@ function PriceInput({ value, onChange }) {
   );
 }
 
-function PhotoInput({ label, onPick, busy }) {
+// Botão de escolher arquivo. No celular abre as opções Câmera, Galeria e Arquivos.
+function PhotoInput({ label, onPick, busy, accept = 'image/*', multiple = true }) {
   return (
     <label className={`pn-upload ${busy ? 'is-busy' : ''}`}>
       <input
         type="file"
-        accept="image/*"
-        multiple
+        accept={accept}
+        multiple={multiple}
         onChange={(e) => {
           onPick([...e.target.files]);
           e.target.value = '';
         }}
       />
-      {busy ? 'Preparando…' : label}
+      {busy ? 'Enviando…' : label}
     </label>
   );
 }
 
 // ---------- formulário de um item ----------
-function Editor({ item, src, onChange, onPhotos, onBack, onDelete }) {
+function Editor({ item, src, onChange, onPhotos, onVideo, onBack, onDelete }) {
   const [confirm, setConfirm] = useState(false);
   const [busy, setBusy] = useState(false);
   const single = singleLabel(item.category);
@@ -139,9 +159,11 @@ function Editor({ item, src, onChange, onPhotos, onBack, onDelete }) {
   };
 
   const pick = async (files, kind) => {
+    if (!files.length) return;
     setBusy(true);
     try {
-      await onPhotos(item, files, kind);
+      if (kind === 'video') await onVideo(item, files[0]);
+      else await onPhotos(item, files, kind);
     } finally {
       setBusy(false);
     }
@@ -228,9 +250,23 @@ function Editor({ item, src, onChange, onPhotos, onBack, onDelete }) {
             <PhotoInput label="+ Fotos" busy={busy} onPick={(f) => pick(f, 'gallery')} />
           </div>
 
-          <Field label="Vídeo (opcional)" hint="Envie o .mp4 para public/videos pelo GitHub e escreva aqui: /videos/nome.mp4">
-            <input value={item.video || ''} onChange={(e) => set({ video: e.target.value || null })} placeholder="/videos/nome.mp4" />
-          </Field>
+          <span className="pn-label">Vídeo (opcional)</span>
+          {item.video && <video key={item.video} className="pn-video" src={src(item.video)} controls playsInline preload="metadata" />}
+          <div className="pn-actions">
+            <PhotoInput
+              label={item.video ? 'Trocar vídeo' : 'Gravar ou escolher vídeo'}
+              accept="video/*"
+              multiple={false}
+              busy={busy}
+              onPick={(f) => pick(f, 'video')}
+            />
+            {item.video && (
+              <button type="button" className="pn-btn" onClick={() => set({ video: null })}>
+                Remover
+              </button>
+            )}
+          </div>
+          <small className="pn-small">Até 60 MB, cerca de 30 segundos em 1080p. Vídeos curtos carregam mais rápido para o cliente.</small>
 
           <label className="pn-check">
             <input type="checkbox" checked={Boolean(item.realPhoto)} onChange={(e) => set({ realPhoto: e.target.checked })} />
@@ -279,7 +315,9 @@ export default function Painel() {
   });
   const [typed, setTyped] = useState('');
   const [catalog, setCatalog] = useState(null);
-  const [files, setFiles] = useState({}); // fotos novas, ainda não publicadas: caminho → dataURL
+  const [files, setFiles] = useState({}); // só sem Vercel Blob: fotos novas ainda não publicadas (caminho → dataURL)
+  const [blobOn, setBlobOn] = useState(false); // envio direto de fotos e vídeos ligado na Vercel
+  const [progress, setProgress] = useState(null); // { label, pct } durante um envio
   const [sent, setSent] = useState(() => new Set()); // fotos já enviadas nesta sessão
   const [dirty, setDirty] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -293,6 +331,7 @@ export default function Painel() {
     try {
       const data = await api('carregar', pass);
       setCatalog({ products: [], depoimentos: [], instagramPosts: [], ...data.catalog });
+      setBlobOn(Boolean(data.blob));
       setPassword(pass);
       try {
         sessionStorage.setItem(PASS_KEY, pass);
@@ -332,17 +371,53 @@ export default function Painel() {
     [files, sent]
   );
 
+  // Envia um arquivo direto do aparelho para o Vercel Blob e devolve o endereço dele.
+  const sendToBlob = async (body, folder, base, ext, contentType, label) => {
+    const pathname = `${folder}/${slug(base)}-${rand()}.${ext}`;
+    let finished = false; // eventos de progresso podem chegar depois do fim; ignora esses
+    setProgress({ label, pct: 0 });
+    try {
+      const result = await upload(pathname, body, {
+        access: 'public',
+        handleUploadUrl: '/api/upload',
+        clientPayload: JSON.stringify({ password }),
+        contentType,
+        multipart: body.size > 8 * MB,
+        onUploadProgress: ({ percentage }) => {
+          if (!finished) setProgress({ label, pct: Math.min(99, Math.round(percentage)) });
+        },
+      });
+      return result.url;
+    } catch {
+      throw new Error('O envio não terminou. Confira a internet e tente de novo. No celular, deixe a tela ligada até chegar a 100%.');
+    } finally {
+      finished = true;
+      setProgress(null);
+    }
+  };
+
+  // Fotos: reduz no aparelho e envia. Sem Vercel Blob, guarda para enviar ao GitHub no "Publicar".
   const addFiles = async (picked, folder, base) => {
-    const added = {};
-    for (const f of picked) {
-      const dataUrl = await shrink(f);
-      added[`/${folder}/${slug(base)}-${rand()}.jpg`] = dataUrl;
+    const paths = [];
+    const pending = {};
+    for (const [i, f] of picked.entries()) {
+      const jpg = await shrink(f);
+      const label = picked.length > 1 ? `Enviando foto ${i + 1} de ${picked.length}` : 'Enviando foto';
+      if (blobOn) {
+        paths.push(await sendToBlob(jpg, folder, base, 'jpg', 'image/jpeg', label));
+      } else {
+        const path = `/${folder}/${slug(base)}-${rand()}.jpg`;
+        pending[path] = await toDataUrl(jpg);
+        paths.push(path);
+      }
     }
-    if (pendingBytes + Object.values(added).reduce((s, d) => s + d.length, 0) > MAX_UPLOAD) {
-      throw new Error('Muitas fotos de uma vez. Clique em “Publicar” e depois envie as outras.');
+    if (!blobOn) {
+      if (pendingBytes + Object.values(pending).reduce((s, d) => s + d.length, 0) > MAX_UPLOAD) {
+        throw new Error('Muitas fotos de uma vez. Clique em “Publicar” e depois envie as outras.');
+      }
+      setFiles((old) => ({ ...old, ...pending }));
     }
-    setFiles((old) => ({ ...old, ...added }));
-    return Object.keys(added);
+    return paths;
   };
 
   const updateProduct = (item) => change({ ...catalog, products: catalog.products.map((p) => (p.id === item.id ? item : p)) });
@@ -352,6 +427,27 @@ export default function Painel() {
       const paths = await addFiles(picked, 'peixes', item.name || 'peixe');
       if (kind === 'main') updateProduct({ ...item, image: paths[0], heroImage: undefined, imagePos: undefined });
       else updateProduct({ ...item, gallery: [...(item.gallery || []), ...paths].slice(0, 8) });
+    } catch (err) {
+      setMsg({ type: 'erro', text: err.message });
+    }
+  };
+
+  const onVideo = async (item, file) => {
+    try {
+      if (!blobOn) {
+        throw new Error('O envio de vídeos ainda não está ligado na Vercel (falta conectar o Vercel Blob ao projeto).');
+      }
+      const ext = videoExt(file);
+      if (!ext) throw new Error('Formato de vídeo não aceito. Use um vídeo gravado pela câmera do celular (MP4 ou MOV).');
+      if (file.size > MAX_VIDEO) {
+        throw new Error(
+          `Este vídeo tem ${Math.round(file.size / MB)} MB e o limite é 60 MB. Grave um vídeo mais curto (até 30 segundos) ou em 1080p.`
+        );
+      }
+      const type = file.type || { mp4: 'video/mp4', mov: 'video/quicktime', webm: 'video/webm' }[ext];
+      const url = await sendToBlob(file, 'videos', item.name || 'peixe', ext, type, 'Enviando vídeo');
+      updateProduct({ ...item, video: url });
+      setMsg({ type: 'ok', text: 'Vídeo enviado. Clique em “Publicar” para ele aparecer no site.' });
     } catch (err) {
       setMsg({ type: 'erro', text: err.message });
     }
@@ -395,12 +491,12 @@ export default function Painel() {
     try {
       // só envia as fotos que continuam em uso
       const used = JSON.stringify(catalog);
-      const upload = Object.entries(files)
+      const pendingFiles = Object.entries(files)
         .filter(([path]) => !sent.has(path) && used.includes(`"${path}"`))
         .map(([path, base64]) => ({ path, base64 }));
-      const data = await api('salvar', password, { catalog, files: upload });
+      const data = await api('salvar', password, { catalog, files: pendingFiles });
       setCatalog({ products: [], depoimentos: [], instagramPosts: [], ...data.catalog });
-      setSent((old) => new Set([...old, ...upload.map((f) => f.path)]));
+      setSent((old) => new Set([...old, ...pendingFiles.map((f) => f.path)]));
       setDirty(false);
       setMsg({ type: 'ok', text: 'Publicado. O site atualiza sozinho em 1 a 2 minutos.' });
       // as fotos novas continuam em pré-visualização até o site ser republicado
@@ -450,7 +546,7 @@ export default function Painel() {
           </a>
           <span className="pn-grow" />
           {dirty && <span className="pn-dirty">Alterações não publicadas</span>}
-          <button type="button" className="pn-btn is-primary" onClick={publish} disabled={busy || !dirty}>
+          <button type="button" className="pn-btn is-primary" onClick={publish} disabled={busy || !dirty || Boolean(progress)}>
             {busy ? 'Publicando…' : 'Publicar'}
           </button>
         </div>
@@ -458,6 +554,11 @@ export default function Painel() {
 
       <div className="pn-body">
         {msg && <p className={`pn-msg is-${msg.type}`}>{msg.text}</p>}
+        {!blobOn && (
+          <p className="pn-msg is-aviso">
+            O envio direto de vídeos ainda não está ligado. Fotos funcionam normalmente, até umas 8 por publicação.
+          </p>
+        )}
 
         {!editingItem && (
           <nav className="pn-tabs">
@@ -479,6 +580,7 @@ export default function Painel() {
             src={src}
             onChange={updateProduct}
             onPhotos={onPhotos}
+            onVideo={onVideo}
             onBack={() => setEditing(null)}
             onDelete={() => {
               change({ ...catalog, products: catalog.products.filter((p) => p.id !== editingItem.id) });
@@ -577,6 +679,8 @@ export default function Painel() {
                     {d.photo && <img className="pn-mini" src={src(d.photo)} alt="" />}
                     <PhotoInput
                       label={d.photo ? 'Trocar foto' : 'Foto do peixe no aquário (opcional)'}
+                      multiple={false}
+                      busy={Boolean(progress)}
                       onPick={async (f) => {
                         try {
                           const [path] = await addFiles(f.slice(0, 1), 'clientes', d.name || 'cliente');
@@ -632,6 +736,19 @@ export default function Painel() {
           </>
         )}
       </div>
+
+      {progress && (
+        <div className="pn-progress" role="status" aria-live="polite">
+          <div className="pn-progress-in">
+            <span>
+              {progress.label}… {progress.pct}%
+            </span>
+            <div className="pn-bar">
+              <i style={{ width: `${progress.pct}%` }} />
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 }
